@@ -14,8 +14,14 @@
 	<name>ignite</name>
 	<description>Demo project for Spring Boot</description>
 
-	<properties>
+  <properties>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<flink.version>1.8.0</flink.version>
+		<ignite.version>2.7.0</ignite.version>
 		<java.version>1.8</java.version>
+		<scala.binary.version>2.11</scala.binary.version>
+		<maven.compiler.source>${java.version}</maven.compiler.source>
+		<maven.compiler.target>${java.version}</maven.compiler.target>
 	</properties>
 
 	<dependencies>
@@ -26,7 +32,7 @@
     <dependency>
 			<groupId>com.reporting.mocks</groupId>
 			<artifactId>model</artifactId>
-			<version>0.9.0</version>
+			<version>0.12.0</version>
 		</dependency>
 		<dependency>
 			<groupId>com.reporting.mocks</groupId>
@@ -52,7 +58,23 @@
     <dependency>
         <groupId>org.apache.ignite</groupId>
         <artifactId>ignite-core</artifactId>
-        <version>2.7.0</version>
+        <version>${ignite.version}</version>
+    </dependency>
+    <!-- https://mvnrepository.com/artifact/org.apache.ignite/ignite-core -->
+    <dependency>
+        <groupId>org.apache.ignite</groupId>
+        <artifactId>ignite-indexing</artifactId>
+        <version>${ignite.version}</version>
+    </dependency>
+		    <dependency>
+        <groupId>org.apache.ignite</groupId>
+        <artifactId>ignite-spring</artifactId>
+        <version>${ignite.version}</version>
+    </dependency>
+		    <dependency>
+        <groupId>org.apache.ignite</groupId>
+        <artifactId>ignite-spring-data</artifactId>
+        <version>${ignite.version}</version>
     </dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

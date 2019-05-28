@@ -1,0 +1,48 @@
+spring:
+  profiles: default
+  data:
+    mongodb:
+      #uri: mongodb://mongodb-service.mongodb.svc.cluster.local/risk
+      uri: mongodb://localhost/risk
+server:
+  port: 30001
+  #port: ${PORT:${SERVER_PORT:0}}
+version: 0.0.1
+
+persistence:
+  datasets:
+    calculationcontext: CalculationContextSet
+    marketenv: MarketEnvSet
+    riskresultset: RiskResultSetSet
+    riskresult: RiskResultSet
+    tradepopulation: TradePopulationSet
+    trade: TradeSet
+
+publishing:
+  topic:
+    intradayriskset: IntraDayRiskSet
+    intradayrisktick: IntraDayRiskTick
+    intradaytrade: IntraDayTrade
+    calccontext: CalculationContext
+    market: MarketEnv
+    riskaggregates: AggregateResults
+
+kafka:
+  server: localhost:9092
+  #server: kafka.kafka:9092
+  topic:
+    intradayriskset: IntraDayRiskSet
+    intradayrisktick: IntraDayRiskTick
+    intradaytrade: IntraDayTrade
+    calccontext: CalculationContext
+    market: MarketEnv
+    riskaggregates: AggregateResults
+
+zookeeper:
+    #server: kafka-zookeepr.kafka:2181
+    server: localhostl:2181
+com:
+  google:
+    projectId: gm-repbus-lab-ph7xs
+    bigtable:
+      instance: simulator
