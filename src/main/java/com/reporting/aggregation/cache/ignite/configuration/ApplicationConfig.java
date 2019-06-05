@@ -7,8 +7,6 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 @Component
-//@Scope(value= ConfigurableBeanFactory.SCOPE_SINGLETON)
-@Scope
 public class ApplicationConfig implements IResultPublisherConfiguration {
     @Autowired
     private Environment environment;

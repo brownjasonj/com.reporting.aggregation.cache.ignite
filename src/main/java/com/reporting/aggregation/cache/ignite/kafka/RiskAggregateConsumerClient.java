@@ -16,6 +16,7 @@ import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -55,7 +56,7 @@ public class RiskAggregateConsumerClient implements Runnable {
         Gson gson = new Gson();
         try {
             while (true) {
-                ConsumerRecords<UUID, String> records = this.consumer.poll(100);
+                ConsumerRecords<UUID, String> records = this.consumer.poll(Duration.ofMillis(100));
                 for (ConsumerRecord<UUID, String> record : records)
                 {
                     RiskAggregate riskAggregate = gson.fromJson(record.value(), RiskAggregate.class);
@@ -83,6 +84,7 @@ public class RiskAggregateConsumerClient implements Runnable {
             consumer.close();
         }
     }
+
     @Override
     public void run() {
         System.out.println("RiskAggregate Kafka/Ignite Consumer/Publisher started");

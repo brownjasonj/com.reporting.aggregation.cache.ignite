@@ -13,7 +13,6 @@ bin
 .springBeans
 .sts4-cache
 .DS_Store
-.mvn
 
 ### IntelliJ IDEA ###
 .idea

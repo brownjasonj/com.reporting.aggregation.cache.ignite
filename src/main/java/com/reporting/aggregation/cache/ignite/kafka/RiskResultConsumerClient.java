@@ -1,17 +1,21 @@
 package com.reporting.aggregation.cache.ignite.kafka;
 
 import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import com.reporting.aggregation.cache.ignite.IgniteCacheFactory;
 import com.reporting.aggregation.cache.ignite.configuration.ApplicationConfig;
 import com.reporting.mocks.model.RiskResult;
 import com.reporting.mocks.model.risks.Risk;
 
 import org.apache.ignite.Ignite;
+import org.apache.ignite.IgniteCache;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -29,7 +33,7 @@ public class RiskResultConsumerClient implements Runnable {
     @Autowired
     public RiskResultConsumerClient(ApplicationConfig applicationConfig) {
         this.BOOTSTRAPSERVER = applicationConfig.getKafkaServer();
-        this.RISKRESULT = applicationConfig.getIntradayRiskSetTopic();
+        this.RISKRESULT = applicationConfig.getIntradayRiskTickTopic();
 
         this.kafkaProperties = new Properties();
 
@@ -40,17 +44,42 @@ public class RiskResultConsumerClient implements Runnable {
 
         this.consumer = new KafkaConsumer<UUID, String>(this.kafkaProperties);
         this.consumer.subscribe(Collections.singletonList(this.RISKRESULT));
+
+        this.ignite = IgniteCacheFactory.getIgnite();
     }
 
     public void consume() {
         Gson gson = new Gson();
         try {
             while (true) {
-                ConsumerRecords<UUID, String> records = this.consumer.poll(100);
+                ConsumerRecords<UUID, String> records = this.consumer.poll(Duration.ofMillis(100));
                 for (ConsumerRecord<UUID, String> record : records)
                 {
-                    RiskResult<? extends Risk> riskResult = gson.fromJson(record.value(), RiskResult.class);
+                    RiskResult<? extends Risk> riskResult = gson.fromJson(record.value(), new TypeToken<RiskResult<? extends Risk>>(){}.getType());
 
+                    // get (or create if non-existent) a cache to hold the list of caches for a given pricing group
+                    // this cache can be used by any consumer that wants to know what caches are available for a particular pricinggroup
+                    IgniteCache<String, HashSet<String>> marketCache = ignite.getOrCreateCache(riskResult.getMarketEnvId().getPricingGroupName());
+
+                    // create the name of the  cache for this particular riskResult
+                    String marketIdName = riskResult.getMarketEnvId().getId().toString();
+                    String riskResultPathName = riskResult.getRisk().getBookName() + "/" + riskResult.getRisk().getRiskType();
+
+                    HashSet<String> cacheNames;
+                    if (marketCache.containsKey(marketIdName)) {
+                        cacheNames = marketCache.get(marketIdName);
+                    }
+                    else {
+                        cacheNames = new HashSet<>();
+                    }
+                    if (!cacheNames.contains(riskResultPathName)) {
+                        cacheNames.add(riskResultPathName);
+                        marketCache.put(marketIdName, cacheNames);
+                    }
+
+                    IgniteCache<UUID, RiskResult<? extends Risk>> riskCache = ignite.getOrCreateCache(marketIdName + "/" + riskResultPathName);
+                    
+                    riskCache.put(riskResult.getRisk().getTcn().getId(), riskResult);
                 }
             }
         } finally {
