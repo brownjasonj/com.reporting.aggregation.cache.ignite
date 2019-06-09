@@ -5,7 +5,7 @@ spring:
       #uri: mongodb://mongodb-service.mongodb.svc.cluster.local/risk
       uri: mongodb://localhost/risk
 server:
-  port: 30001
+  port: 8081
   #port: ${PORT:${SERVER_PORT:0}}
 version: 0.0.1
 

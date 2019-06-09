@@ -1,15 +1,14 @@
 package com.reporting.aggregation.cache.ignite.kafka;
 
 import com.google.gson.Gson;
+import com.reporting.aggregation.cache.ignite.IgniteCacheFactory;
 import com.reporting.aggregation.cache.ignite.configuration.ApplicationConfig;
-import com.reporting.mocks.model.risks.Pv;
 import com.reporting.mocks.model.risks.aggregate.DeltaAggregate;
 import com.reporting.mocks.model.risks.aggregate.PvAggregate;
 import com.reporting.mocks.model.risks.aggregate.RiskAggregate;
 
 import org.apache.ignite.Ignite;
 import org.apache.ignite.IgniteCache;
-import org.apache.ignite.Ignition;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -37,9 +36,6 @@ public class RiskAggregateConsumerClient implements Runnable {
         this.BOOTSTRAPSERVER = applicationConfig.getKafkaServer();
         this.RISKRESULT = applicationConfig.getRiskAggregatesTopic();
 
-        Ignition.setClientMode(true);
-        this.ignite = Ignition.start("examples/config/example-ignite.xml");
-
         this.kafkaProperties = new Properties();
 
         this.kafkaProperties.put("bootstrap.servers", this.BOOTSTRAPSERVER);
@@ -49,6 +45,8 @@ public class RiskAggregateConsumerClient implements Runnable {
 
         this.consumer = new KafkaConsumer<UUID, String>(this.kafkaProperties);
         this.consumer.subscribe(Collections.singletonList(this.RISKRESULT));
+
+        this.ignite = IgniteCacheFactory.getIgnite();
     }
 
     
@@ -87,7 +85,7 @@ public class RiskAggregateConsumerClient implements Runnable {
 
     @Override
     public void run() {
-        System.out.println("RiskAggregate Kafka/Ignite Consumer/Publisher started");
+        LOGGER.info("RiskAggregate Kafka/Ignite Consumer/Publisher started");
         consume();
     }
 }

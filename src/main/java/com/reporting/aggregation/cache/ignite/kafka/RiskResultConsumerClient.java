@@ -2,13 +2,14 @@ package com.reporting.aggregation.cache.ignite.kafka;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-import com.reporting.aggregation.cache.ignite.IgniteCacheFactory;
 import com.reporting.aggregation.cache.ignite.configuration.ApplicationConfig;
+import com.reporting.aggregation.cache.ignite.datacaches.IgniteCacheFactory;
+import com.reporting.aggregation.cache.ignite.datacaches.PricingGroupDataCache;
+import com.reporting.aggregation.cache.ignite.datacaches.RiskResultDataCache;
 import com.reporting.mocks.model.RiskResult;
 import com.reporting.mocks.model.risks.Risk;
 
 import org.apache.ignite.Ignite;
-import org.apache.ignite.IgniteCache;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
@@ -30,6 +31,9 @@ public class RiskResultConsumerClient implements Runnable {
 
     protected Ignite ignite;
 
+    protected HashMap<String, RiskResultDataCache> riskResultDataCaches;
+    protected HashMap<String, PricingGroupDataCache> pricingGroupDataCaches;
+    
     @Autowired
     public RiskResultConsumerClient(ApplicationConfig applicationConfig) {
         this.BOOTSTRAPSERVER = applicationConfig.getKafkaServer();
@@ -46,8 +50,59 @@ public class RiskResultConsumerClient implements Runnable {
         this.consumer.subscribe(Collections.singletonList(this.RISKRESULT));
 
         this.ignite = IgniteCacheFactory.getIgnite();
+
+        this.riskResultDataCaches = new HashMap<>();
+        this.pricingGroupDataCaches = new HashMap<>();
     }
 
+    public void consume() {
+        Gson gson = new Gson();
+        try {
+            while (true) {
+                ConsumerRecords<UUID, String> records = this.consumer.poll(Duration.ofMillis(100));
+                for (ConsumerRecord<UUID, String> record : records)
+                {
+                    RiskResult<? extends Risk> riskResult = gson.fromJson(record.value(), new TypeToken<RiskResult<? extends Risk>>(){}.getType());
+
+                    String pricingGroup = riskResult.getMarketEnvId().getPricingGroupName();
+
+                    PricingGroupDataCache pgDataCache;
+                    if (this.pricingGroupDataCaches.containsKey(pricingGroup)) {
+                        pgDataCache = this.pricingGroupDataCaches.get(pricingGroup);
+                    }
+                    else {
+                        pgDataCache = new PricingGroupDataCache(pricingGroup);
+                        this.pricingGroupDataCaches.put(pricingGroup, pgDataCache);
+                    }
+
+                    // create the name of the  cache for this particular riskResult  The cache name has the form
+                    //
+                    //  <marketid>/<book>/<risktype>
+                    //
+                    String marketIdName = riskResult.getMarketEnvId().getId().toString();
+                    String riskResultPathName = riskResult.getRisk().getBookName() + "/" + riskResult.getRisk().getRiskType();
+                    String riskResultCacheName = marketIdName + "/" + riskResultPathName;
+
+                    pgDataCache.addCacheName(riskResult.getMarketEnvId(), riskResultCacheName);
+
+                    RiskResultDataCache rrDataCache;
+                    if (riskResultDataCaches.containsKey(riskResultCacheName)) {
+                        rrDataCache = riskResultDataCaches.get(riskResultCacheName);
+                    }
+                    else {
+                        rrDataCache = new RiskResultDataCache(riskResultCacheName);
+                        riskResultDataCaches.put(riskResultCacheName, rrDataCache);
+                    }
+
+                    LOGGER.info("Writing RiskResult to cache " + riskResultCacheName);
+                    rrDataCache.save(riskResult.getRisk().getTcn().getId(), riskResult);
+                }
+            }
+        } finally {
+            consumer.close();
+        }
+    }
+/*
     public void consume() {
         Gson gson = new Gson();
         try {
@@ -86,10 +141,11 @@ public class RiskResultConsumerClient implements Runnable {
             consumer.close();
         }
     }
+    */
 
     @Override
     public void run() {
-        System.out.println("RiskResult Kafka Consumer started");
+        LOGGER.info("RiskResult Kafka Consumer started");
         consume();
     }
 }

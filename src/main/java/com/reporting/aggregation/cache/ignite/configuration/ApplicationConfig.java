@@ -2,7 +2,6 @@ package com.reporting.aggregation.cache.ignite.configuration;
 
 import com.reporting.mocks.interfaces.publishing.IResultPublisherConfiguration;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Scope;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
